@@ -2,6 +2,9 @@
   command = "npm run build"
   publish = "dist"
 
+[build.environment]
+  VITE_API_URL = "https://assigment-toyxona.onrender.com/api"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
