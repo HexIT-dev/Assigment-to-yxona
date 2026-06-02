@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  OWNER
+  USER
+}
+
+enum HallStatus {
+  PENDING
+  APPROVED
+}
+
+enum BookingStatus {
+  PENDING
+  APPROVED
+  UPCOMING
+  COMPLETED
+  CANCELLED
+  REJECTED
+}
+
+enum ServiceType {
+  SINGER
+  KARNAY
+  MENU
+  CAR
+  FOOD
+  MUSIC
+  DECOR
+}
+
+model User {
+  id        String   @id @default(uuid())
+  firstName String
+  lastName  String
+  email     String   @unique
+  phone     String   @unique
+  username  String   @unique
+  password  String
+  role      Role     @default(USER)
+  balance   Float    @default(0)
+  isVerified Boolean  @default(false)
+  otp       String?
+  halls     Toyxona[] @relation("OwnerHalls")
+  bookings  Booking[]
+  sentMessages     Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  avatarUrl String?
+  blockedUsers BlockedUser[] @relation("Blocker")
+  blockedBy    BlockedUser[] @relation("Blocked")
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  content    String
+  senderId   String
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId String
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model Toyxona {
+  id           String        @id @default(uuid())
+  name         String
+  district     String
+  address      String
+  capacity     Int
+  pricePerSeat Float
+  phone        String
+  status       HallStatus    @default(PENDING)
+  ownerId      String?
+  owner        User?         @relation("OwnerHalls", fields: [ownerId], references: [id])
+  images       HallImage[]
+  services     HallService[]
+  bookings     Booking[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model HallImage {
+  id      String  @id @default(uuid())
+  url     String
+  is360   Boolean @default(false)
+  hallId  String
+  hall    Toyxona @relation(fields: [hallId], references: [id], onDelete: Cascade)
+}
+
+model HallService {
+  id          String      @id @default(uuid())
+  type        ServiceType
+  name        String      // Singer name, Car brand, Menu item name
+  price       Float       @default(0)
+  imageUrl    String?
+  description String?     // For extra details
+  hallId      String
+  hall        Toyxona     @relation(fields: [hallId], references: [id], onDelete: Cascade)
+  bookings    BookingService[]
+}
+
+model Booking {
+  id             String         @id @default(uuid())
+  date           DateTime
+  seats          Int
+  totalPrice     Float
+  advancePayment Float
+  status         BookingStatus  @default(PENDING)
+  rejectReason   String?
+  hallId         String
+  hall           Toyxona        @relation(fields: [hallId], references: [id])
+  userId         String
+  user           User           @relation(fields: [userId], references: [id])
+  services       BookingService[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model BookingService {
+  id        String      @id @default(uuid())
+  bookingId String
+  booking   Booking     @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  serviceId String
+  service   HallService @relation(fields: [serviceId], references: [id])
+}
+
+model BlockedUser {
+  id        String   @id @default(uuid())
+  blockerId String
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id])
+  blockedId String
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+}

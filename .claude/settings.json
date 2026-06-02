@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node dist/server.js)",
+      "Bash(curl -s http://localhost:5000/api/halls)",
+      "Bash(powershell -Command \"Invoke-WebRequest -Uri 'http://localhost:5173' -UseBasicParsing -TimeoutSec 5 | Select-Object -ExpandProperty StatusCode\")",
+      "Bash(powershell -Command \"Invoke-WebRequest -Uri 'http://localhost:5000/api/halls' -UseBasicParsing -TimeoutSec 5 | Select-Object -ExpandProperty StatusCode\")",
+      "Bash(npm install *)",
+      "Bash(npx playwright *)"
+    ]
+  }
+}

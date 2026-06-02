@@ -1,0 +1,123 @@
+import { Request, Response } from 'express';
+import prisma from '../utils/prisma';
+import bcrypt from 'bcryptjs';
+
+export const getUsers = async (req: Request, res: Response) => {
+  try {
+    const { role, search } = req.query;
+
+    const where: any = role ? { role: role as any } : {};
+    if (search) {
+      where.OR = [
+        { firstName: { contains: search as string, mode: 'insensitive' } },
+        { lastName: { contains: search as string, mode: 'insensitive' } },
+        { username: { contains: search as string, mode: 'insensitive' } }
+      ];
+    }
+
+    const users = await prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        username: true,
+        role: true,
+        isVerified: true,
+        avatarUrl: true,
+        createdAt: true,
+        halls: {
+          select: {
+            id: true,
+            name: true,
+            district: true,
+            status: true,
+            capacity: true,
+            pricePerSeat: true,
+            images: { select: { url: true }, take: 1 }
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(users);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getUserById = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        username: true,
+        role: true,
+        isVerified: true,
+        avatarUrl: true,
+        createdAt: true,
+        halls: {
+          include: {
+            images: true,
+            _count: { select: { bookings: true } }
+          }
+        }
+      }
+    });
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+    res.json(user);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const updateProfile = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user.id;
+    const { firstName, lastName, phone, password, avatarUrl } = req.body;
+
+    const updateData: any = {};
+    if (firstName) updateData.firstName = firstName;
+    if (lastName) updateData.lastName = lastName;
+    if (phone) updateData.phone = phone;
+    if (avatarUrl) updateData.avatarUrl = avatarUrl;
+    if (password) {
+      updateData.password = await bcrypt.hash(password, 10);
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+      select: {
+        id: true, firstName: true, lastName: true,
+        email: true, phone: true, username: true,
+        role: true, avatarUrl: true
+      }
+    });
+
+    res.json(updatedUser);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const deleteUser = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await prisma.user.delete({ where: { id: id as string } });
+    res.json({ message: 'User deleted successfully' });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
