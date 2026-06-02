@@ -121,3 +121,39 @@ export const deleteUser = async (req: Request, res: Response) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const createOwnerByAdmin = async (req: Request, res: Response) => {
+  try {
+    const { firstName, lastName, email, phone, username, password } = req.body;
+
+    const existing = await prisma.user.findFirst({
+      where: { OR: [{ email }, { username }, { phone }] }
+    });
+    if (existing) {
+      res.status(400).json({ message: 'Bu email, username yoki telefon allaqachon mavjud' });
+      return;
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const randomBalance = Math.floor(5000000 + Math.random() * 95000000);
+
+    const user = await prisma.user.create({
+      data: {
+        firstName, lastName, email, phone, username,
+        password: hashedPassword,
+        role: 'OWNER',
+        isVerified: true,
+        balance: randomBalance
+      },
+      select: {
+        id: true, firstName: true, lastName: true,
+        email: true, phone: true, username: true,
+        role: true, balance: true, isVerified: true, createdAt: true
+      }
+    });
+
+    res.status(201).json(user);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};

@@ -262,8 +262,8 @@ const AdminDashboard: React.FC = () => {
   const handleCreateOwner = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/auth/register', { ...ownerForm, role: 'OWNER' });
-      toast.success("To'yxona egasi muvaffaqiyatli qo'shildi!");
+      await api.post('/users/create-owner', ownerForm);
+      toast.success("To'yxona egasi muvaffaqiyatli qo'shildi! U darhol login qila oladi.");
       setIsOwnerModalOpen(false);
       setOwnerForm({ firstName: '', lastName: '', email: '', phone: '', username: '', password: '' });
       fetchData();
