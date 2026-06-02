@@ -38,6 +38,15 @@ import bcrypt from 'bcryptjs';
 import { HallStatus, ServiceType } from '@prisma/client';
 
 const initAdmin = async () => {
+  // Bazadagi barcha tasdiqlanmagan ownerlarni tuzatish
+  const fixed = await prisma.user.updateMany({
+    where: { role: 'OWNER', isVerified: false },
+    data: { isVerified: true }
+  });
+  if (fixed.count > 0) {
+    console.log(`Fixed ${fixed.count} unverified owners -> isVerified: true`);
+  }
+
   const admin = await prisma.user.findUnique({ where: { username: 'admin123' } });
   if (!admin) {
     const hashedPassword = await bcrypt.hash('admin123', 10);
