@@ -13,10 +13,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Reflect the request origin so any frontend (Netlify, localhost) is allowed.
 app.use(cors({
-  origin: process.env.FRONTEND_URL
-    ? process.env.FRONTEND_URL.split(',')
-    : ['http://localhost:5173', 'http://localhost:3000'],
+  origin: true,
   credentials: true,
 }));
 app.use(express.json());
