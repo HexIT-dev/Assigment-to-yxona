@@ -17,60 +17,55 @@ export const createBooking = async (req: Request, res: Response) => {
        return;
     }
 
-    // Check if date is already booked
-    const existingBooking = await prisma.booking.findFirst({
-      where: {
-        hallId,
-        date: new Date(date),
-        status: 'APPROVED'
-      }
-    });
-
-    if (existingBooking) {
-       res.status(400).json({ message: 'This date is already booked' });
+    // Sig'im tekshiruvi
+    if (seats > hall.capacity) {
+       res.status(400).json({ message: 'Odamlar soni to\'yxona sig\'imidan oshib ketdi' });
        return;
     }
 
-    // Calculate total price
+    // Bir kunga maksimal 2 ta bron (nahorgi osh + oqshomgi to'y)
+    const sameDayCount = await prisma.booking.count({
+      where: {
+        hallId,
+        date: new Date(date),
+        status: { notIn: ['CANCELLED', 'REJECTED'] }
+      }
+    });
+
+    if (sameDayCount >= 2) {
+       res.status(400).json({ message: 'Bu kun to\'liq band (kuniga 2 tadan ortiq bron mumkin emas)' });
+       return;
+    }
+
+    // Umumiy narxni hisoblash
     let totalPrice = hall.pricePerSeat * seats;
     const selectedServices = hall.services.filter(s => serviceIds.includes(s.id));
     selectedServices.forEach(s => totalPrice += s.price);
 
-    const advancePayment = totalPrice * 0.2; // 20% advance
+    const advancePayment = totalPrice * 0.2; // 20% avans (faqat ko'rsatkich uchun)
 
-    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
-    if (!user || user.balance < advancePayment) {
-       res.status(400).json({ message: 'Hisobingizda yetarli mablag\' mavjud emas' });
-       return;
-    }
-
-    const [booking] = await prisma.$transaction([
-      prisma.booking.create({
-        data: {
-          date: new Date(date),
-          seats,
-          totalPrice,
-          advancePayment,
-          hallId,
-          userId: req.user.id,
-          services: {
-            create: selectedServices.map(s => ({
-              serviceId: s.id
-            }))
-          }
-        },
-        include: {
-          hall: true,
-          services: {
-            include: { service: true }
-          }
+    // To'lov mock — balans tekshiruvi yo'q (spec bo'yicha shunchaki muvaffaqiyatli)
+    const booking = await prisma.booking.create({
+      data: {
+        date: new Date(date),
+        seats,
+        totalPrice,
+        advancePayment,
+        hallId,
+        userId: req.user.id,
+        services: {
+          create: selectedServices.map(s => ({
+            serviceId: s.id
+          }))
         }
-      }),
-      prisma.user.update({
-        where: { id: req.user.id },
-        data: { balance: { decrement: advancePayment } }
-      })
-    ]);
+      },
+      include: {
+        hall: true,
+        services: {
+          include: { service: true }
+        }
+      }
+    });
 
     res.status(201).json(booking);
   } catch (error: any) {

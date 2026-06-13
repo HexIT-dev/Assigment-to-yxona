@@ -2,6 +2,9 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../utils/prisma';
+import { sendOtpEmail } from '../utils/mailer';
+
+const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is not set');
@@ -20,10 +23,7 @@ export const register = async (req: Request, res: Response) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const otp = role === 'OWNER' ? Math.floor(100000 + Math.random() * 900000).toString() : null;
-    
-    // Assign a random balance between 5,000,000 and 100,000,000 for the exam
-    const randomBalance = Math.floor(5000000 + Math.random() * 95000000);
+    const otp = role === 'OWNER' ? generateOtp() : null;
 
     const user = await prisma.user.create({
       data: {
@@ -35,13 +35,13 @@ export const register = async (req: Request, res: Response) => {
         password: hashedPassword,
         role,
         otp,
-        balance: randomBalance,
-        isVerified: role !== 'OWNER' // Users are verified by default for simplicity, owners need OTP
+        isVerified: role !== 'OWNER' // Foydalanuvchilar darrov tasdiqlanadi, egalar OTP orqali
       }
     });
 
+    // To'yxona egasiga tasdiqlash kodini emailga yuborish
     if (role === 'OWNER' && otp) {
-      console.log(`OTP for ${email}: ${otp}`); // Mock email sending
+      await sendOtpEmail(email, otp);
     }
 
     const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
@@ -72,7 +72,11 @@ export const login = async (req: Request, res: Response) => {
     }
 
     if (user.role === 'OWNER' && !user.isVerified) {
-       res.status(401).json({ message: 'Please verify your account', needsVerification: true, email: user.email });
+       // Ilk marta login: yangi OTP yaratib, emailga yuboramiz
+       const otp = generateOtp();
+       await prisma.user.update({ where: { id: user.id }, data: { otp } });
+       await sendOtpEmail(user.email, otp);
+       res.status(401).json({ message: 'Hisobingizni tasdiqlang', needsVerification: true, email: user.email });
        return;
     }
 
