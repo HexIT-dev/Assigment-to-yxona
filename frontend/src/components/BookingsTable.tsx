@@ -12,8 +12,6 @@ interface Props {
   showHall?: boolean;
   showUser?: boolean;
   onCancel?: (b: Booking) => void;
-  /** Foydalanuvchi faqat PENDING bronni bekor qila oladi */
-  userMode?: boolean;
 }
 
 /** Bronning ko'rsatiladigan holati */
@@ -25,7 +23,7 @@ function displayStatus(b: Booking): { label: string; tone: "success" | "info" | 
     : { label: "Endi bo'ladigan", tone: "success" };
 }
 
-export function BookingsTable({ bookings, showHall = true, showUser = true, onCancel, userMode }: Props) {
+export function BookingsTable({ bookings, showHall = true, showUser = true, onCancel }: Props) {
   const [sortBy, setSortBy] = useState<SortKey>("date");
   const [statusFilter, setStatusFilter] = useState<"all" | "upcoming" | "past" | "cancelled">("all");
   const [districtFilter, setDistrictFilter] = useState("");
@@ -101,8 +99,7 @@ export function BookingsTable({ bookings, showHall = true, showUser = true, onCa
               <tbody>
                 {rows.map((b, i) => {
                   const st = displayStatus(b);
-                  const canCancel = onCancel && b.status !== "CANCELLED" && b.status !== "REJECTED" &&
-                    (!userMode || b.status === "PENDING") && !isPast(b.date);
+                  const canCancel = onCancel && b.status !== "CANCELLED" && b.status !== "REJECTED" && !isPast(b.date);
                   return (
                     <tr key={b.id} className={cx("border-t border-cream-200", i % 2 ? "bg-cream-50" : "bg-white")}>
                       <Td className="font-mono text-xs text-ink-soft">{b.id.slice(0, 8)}</Td>
@@ -141,8 +138,7 @@ export function BookingsTable({ bookings, showHall = true, showUser = true, onCa
           <div className="space-y-3 md:hidden">
             {rows.map((b) => {
               const st = displayStatus(b);
-              const canCancel = onCancel && b.status !== "CANCELLED" && b.status !== "REJECTED" &&
-                (!userMode || b.status === "PENDING") && !isPast(b.date);
+              const canCancel = onCancel && b.status !== "CANCELLED" && b.status !== "REJECTED" && !isPast(b.date);
               return (
                 <div key={b.id} className="card p-4">
                   <div className="flex items-start justify-between">

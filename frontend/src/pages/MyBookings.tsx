@@ -43,7 +43,7 @@ export default function MyBookings() {
       </div>
 
       {loading ? <PageLoader /> : (
-        <BookingsTable bookings={bookings} showHall showUser={false} onCancel={cancel} userMode />
+        <BookingsTable bookings={bookings} showHall showUser={false} onCancel={cancel} />
       )}
     </div>
   );

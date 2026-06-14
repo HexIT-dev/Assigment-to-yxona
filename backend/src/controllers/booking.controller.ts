@@ -140,9 +140,16 @@ export const cancelBooking = async (req: Request, res: Response) => {
        return;
     }
 
-    if (isUser && booking.status !== 'PENDING') {
-       res.status(400).json({ message: 'Siz faqat kutilayotgan bronlarni bekor qila olasiz' });
-       return;
+    // Foydalanuvchi o'zining o'tib ketmagan istalgan bronini bekor qila oladi
+    if (isUser) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const d = new Date(booking.date);
+      d.setHours(0, 0, 0, 0);
+      if (d < today) {
+        res.status(400).json({ message: "O'tib ketgan bronni bekor qilib bo'lmaydi" });
+        return;
+      }
     }
 
     const { reason } = req.body;
