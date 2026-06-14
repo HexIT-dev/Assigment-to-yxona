@@ -2,64 +2,104 @@ import nodemailer from 'nodemailer';
 import dns from 'dns';
 
 // Render IPv6 chiqishini qo'llab-quvvatlamaydi (ENETUNREACH).
-// DNS'ni IPv4'ni birinchi qaytaradigan qilamiz.
 dns.setDefaultResultOrder('ipv4first');
 
 /**
- * Email yuborish. Agar SMTP sozlamalari (.env) mavjud bo'lsa — haqiqiy email yuboriladi,
- * aks holda konsolga chiqariladi (lokal ishlab chiqish uchun).
+ * Email yuborish. Bir nechta usulni qo'llab-quvvatlaydi (tartib bilan):
+ *   1. Resend  (RESEND_API_KEY)  — HTTP API, port 443
+ *   2. Brevo   (BREVO_API_KEY)   — HTTP API, port 443
+ *   3. SMTP    (SMTP_HOST...)     — lokal ishlab chiqish uchun
+ *   4. Mock    — konsolga chiqaradi
  *
- * .env namunasi (Gmail):
- *   SMTP_HOST=smtp.gmail.com
- *   SMTP_PORT=465
- *   SMTP_USER=youremail@gmail.com
- *   SMTP_PASS=app_password   (Gmail "App password")
- *   SMTP_FROM="To'yxona <youremail@gmail.com>"
+ * MUHIM: Render (bepul tarif) chiquvchi SMTP portlarini (465/587) bloklaydi,
+ * shuning uchun Render'da HTTP API (Resend yoki Brevo) ishlatish kerak.
+ *
+ * .env namunasi (Brevo):
+ *   BREVO_API_KEY=xkeysib-...
+ *   EMAIL_FROM=siz@gmail.com           (Brevo'da tasdiqlangan sender)
+ *   EMAIL_FROM_NAME=To'yxona
  */
 
-const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM } = process.env;
-
-const isConfigured = !!(SMTP_HOST && SMTP_USER && SMTP_PASS);
+const {
+  SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM,
+  RESEND_API_KEY, BREVO_API_KEY, EMAIL_FROM, EMAIL_FROM_NAME,
+} = process.env;
 
 const port = Number(SMTP_PORT) || 465;
 
-const transporter = isConfigured
+const smtpConfigured = !!(SMTP_HOST && SMTP_USER && SMTP_PASS);
+const transporter = smtpConfigured
   ? nodemailer.createTransport({
       host: SMTP_HOST,
       port,
-      secure: port === 465, // 465 = SSL, 587/2525 = STARTTLS
+      secure: port === 465,
       auth: { user: SMTP_USER, pass: SMTP_PASS },
-      family: 4, // IPv4'ga majburlash (Render IPv6 ulanmaydi)
-      // 3 daqiqa osilib qolmasligi uchun qisqa timeoutlar
+      family: 4,
       connectionTimeout: 15000,
       greetingTimeout: 10000,
       socketTimeout: 20000,
     } as any)
   : null;
 
+const fromEmail = EMAIL_FROM || SMTP_USER || 'onboarding@resend.dev';
+const fromName = EMAIL_FROM_NAME || "To'yxona";
+
 export async function sendOtpEmail(to: string, otp: string): Promise<void> {
   const subject = "To'yxona — tasdiqlash kodi";
   const html = otpTemplate(otp);
 
-  if (!transporter) {
-    // SMTP sozlanmagan — lokal rejim
-    console.log(`\n📧 [MOCK EMAIL] ${to} uchun tasdiqlash kodi: ${otp}\n`);
-    return;
-  }
-
   try {
-    await transporter.sendMail({
-      from: SMTP_FROM || SMTP_USER,
-      to,
-      subject,
-      html,
-    });
-    console.log(`📧 Tasdiqlash kodi ${to} manziliga yuborildi`);
+    if (RESEND_API_KEY) {
+      await sendViaResend(to, subject, html);
+      console.log(`📧 (Resend) Tasdiqlash kodi ${to} manziliga yuborildi`);
+      return;
+    }
+    if (BREVO_API_KEY) {
+      await sendViaBrevo(to, subject, html);
+      console.log(`📧 (Brevo) Tasdiqlash kodi ${to} manziliga yuborildi`);
+      return;
+    }
+    if (transporter) {
+      await transporter.sendMail({ from: SMTP_FROM || SMTP_USER, to, subject, html });
+      console.log(`📧 (SMTP) Tasdiqlash kodi ${to} manziliga yuborildi`);
+      return;
+    }
+    // Hech qaysi usul sozlanmagan — lokal mock rejim
+    console.log(`\n📧 [MOCK EMAIL] ${to} uchun tasdiqlash kodi: ${otp}\n`);
   } catch (err: any) {
-    // Aniq xatoni log'ga chiqaramiz (Render Logs'da ko'rinadi)
     console.error(`❌ Email yuborishda xato (${to}):`, err?.code || '', err?.message || err);
     throw err;
   }
+}
+
+async function sendViaResend(to: string, subject: string, html: string): Promise<void> {
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ from: `${fromName} <${fromEmail}>`, to, subject, html }),
+  });
+  if (!res.ok) throw new Error(`Resend ${res.status}: ${await res.text()}`);
+}
+
+async function sendViaBrevo(to: string, subject: string, html: string): Promise<void> {
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': BREVO_API_KEY as string,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({
+      sender: { email: fromEmail, name: fromName },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+    }),
+  });
+  if (!res.ok) throw new Error(`Brevo ${res.status}: ${await res.text()}`);
 }
 
 function otpTemplate(otp: string): string {
