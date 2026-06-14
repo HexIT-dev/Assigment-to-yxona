@@ -1,4 +1,9 @@
 import nodemailer from 'nodemailer';
+import dns from 'dns';
+
+// Render IPv6 chiqishini qo'llab-quvvatlamaydi (ENETUNREACH).
+// DNS'ni IPv4'ni birinchi qaytaradigan qilamiz.
+dns.setDefaultResultOrder('ipv4first');
 
 /**
  * Email yuborish. Agar SMTP sozlamalari (.env) mavjud bo'lsa — haqiqiy email yuboriladi,
@@ -24,11 +29,12 @@ const transporter = isConfigured
       port,
       secure: port === 465, // 465 = SSL, 587/2525 = STARTTLS
       auth: { user: SMTP_USER, pass: SMTP_PASS },
+      family: 4, // IPv4'ga majburlash (Render IPv6 ulanmaydi)
       // 3 daqiqa osilib qolmasligi uchun qisqa timeoutlar
       connectionTimeout: 15000,
       greetingTimeout: 10000,
       socketTimeout: 20000,
-    })
+    } as any)
   : null;
 
 export async function sendOtpEmail(to: string, otp: string): Promise<void> {
