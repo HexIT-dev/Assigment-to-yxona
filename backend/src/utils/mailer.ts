@@ -16,12 +16,18 @@ const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM } = process.env;
 
 const isConfigured = !!(SMTP_HOST && SMTP_USER && SMTP_PASS);
 
+const port = Number(SMTP_PORT) || 465;
+
 const transporter = isConfigured
   ? nodemailer.createTransport({
       host: SMTP_HOST,
-      port: Number(SMTP_PORT) || 465,
-      secure: Number(SMTP_PORT) !== 587, // 465 = SSL, 587 = STARTTLS
+      port,
+      secure: port === 465, // 465 = SSL, 587/2525 = STARTTLS
       auth: { user: SMTP_USER, pass: SMTP_PASS },
+      // 3 daqiqa osilib qolmasligi uchun qisqa timeoutlar
+      connectionTimeout: 15000,
+      greetingTimeout: 10000,
+      socketTimeout: 20000,
     })
   : null;
 
@@ -35,13 +41,19 @@ export async function sendOtpEmail(to: string, otp: string): Promise<void> {
     return;
   }
 
-  await transporter.sendMail({
-    from: SMTP_FROM || SMTP_USER,
-    to,
-    subject,
-    html,
-  });
-  console.log(`📧 Tasdiqlash kodi ${to} manziliga yuborildi`);
+  try {
+    await transporter.sendMail({
+      from: SMTP_FROM || SMTP_USER,
+      to,
+      subject,
+      html,
+    });
+    console.log(`📧 Tasdiqlash kodi ${to} manziliga yuborildi`);
+  } catch (err: any) {
+    // Aniq xatoni log'ga chiqaramiz (Render Logs'da ko'rinadi)
+    console.error(`❌ Email yuborishda xato (${to}):`, err?.code || '', err?.message || err);
+    throw err;
+  }
 }
 
 function otpTemplate(otp: string): string {
