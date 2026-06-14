@@ -39,14 +39,8 @@ import bcrypt from 'bcryptjs';
 import { HallStatus, ServiceType } from '@prisma/client';
 
 const initAdmin = async () => {
-  // Bazadagi barcha tasdiqlanmagan ownerlarni tuzatish
-  const fixed = await prisma.user.updateMany({
-    where: { role: 'OWNER', isVerified: false },
-    data: { isVerified: true }
-  });
-  if (fixed.count > 0) {
-    console.log(`Fixed ${fixed.count} unverified owners -> isVerified: true`);
-  }
+  // Eslatma: ownerlarni bu yerda avtomatik tasdiqlamaymiz.
+  // Spec bo'yicha ega birinchi marta login qilganda OTP orqali o'zi tasdiqlanishi kerak.
 
   const admin = await prisma.user.findUnique({ where: { username: 'admin123' } });
   if (!admin) {

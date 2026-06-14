@@ -168,7 +168,8 @@ export const createOwnerByAdmin = async (req: Request, res: Response) => {
         firstName, lastName, email, phone, username,
         password: hashedPassword,
         role: 'OWNER',
-        isVerified: true,
+        // Spec: ega birinchi marta login qilganda OTP orqali tasdiqlanadi
+        isVerified: false,
         balance: randomBalance
       },
       select: {
