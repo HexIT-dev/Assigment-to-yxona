@@ -1,180 +1,86 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import api from '../utils/api';
-import { Lock, ArrowRight, ShieldCheck, User, ChevronLeft, Sparkles } from 'lucide-react';
-import { toast } from 'react-hot-toast';
-import { motion } from 'framer-motion';
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import toast from "react-hot-toast";
+import { ShieldCheck } from "lucide-react";
+import { Button, Input } from "../components/ui";
+import { SuzaniRosette, IslimiVine } from "../components/ornaments/Suzani";
+import { useAuth } from "../context/AuthContext";
+import api, { apiError } from "../lib/api";
+import type { User } from "../types";
 
-const AdminLogin: React.FC = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+export default function AdminLogin() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [form, setForm] = useState({ username: "", password: "" });
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await api.post('/auth/login', { username, password });
-      if (res.data.user.role !== 'ADMIN') {
-        toast.error("Siz admin emassiz. Iltimos to'g'ri hisob bilan kiring.");
-        setLoading(false);
+      const { data } = await api.post<{ user: User; token: string }>("/auth/login", form);
+      if (data.user.role !== "ADMIN") {
+        toast.error("Bu sahifa faqat administrator uchun");
         return;
       }
-      login(res.data.token, res.data.user);
-      toast.success('Admin tizimga muvaffaqiyatli kirdi!');
-      navigate('/admin');
-    } catch (error) {
-      toast.error("Login yoki parol noto'g'ri");
+      login(data.token, data.user);
+      toast.success("Administrator paneliga xush kelibsiz");
+      navigate("/admin", { replace: true });
+    } catch (err) {
+      toast.error(apiError(err, "Login yoki parol noto'g'ri"));
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
+  }
 
   return (
-    <div className="auth-container">
-      {/* Background Decor */}
-      <div className="auth-bg-glow-1"></div>
-      <div className="auth-bg-glow-2"></div>
+    <div className="relative grid min-h-screen place-items-center overflow-hidden bg-cobalt-800 p-6">
+      <div className="suzani-bg absolute inset-0 opacity-10" />
+      <SuzaniRosette className="absolute -left-20 -top-20 h-96 w-96 text-gold-400/20" />
+      <SuzaniRosette className="absolute -bottom-24 -right-20 h-[28rem] w-[28rem] text-terracotta-400/15" />
+      <IslimiVine className="absolute right-16 top-1/4 h-40 w-40 text-cobalt-500/40" />
 
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.4 }}
-        className="auth-card"
-      >
-        {/* Left Side - Visual Branding */}
-        <div className="auth-branding">
-          <div className="auth-brand-logo"></div>
-          <div className="auth-brand-content">
-            <Link to="/" className="nav-logo text-white shadow-none" style={{ textDecoration: 'none' }}>
-              <div className="nav-logo-icon text-accent">
-                <Sparkles size={24} />
-              </div>
-              <span style={{ color: '#ffffff' }}>Elegance</span>
-            </Link>
-
-            <div className="auth-brand-main">
-              <h2>
-                Admin <br />
-                <span className="gold-gradient-text">Markazi.</span>
-              </h2>
-              <p>To'yxona platformasining asosiy nazorat va boshqaruv tizimi.</p>
-            </div>
-
-            <div className="auth-brand-stats">
-              <div className="auth-brand-stat-item">
-                <p className="stat-value" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <ShieldCheck size={28} className="text-accent" />
-                </p>
-                <p className="stat-label">Xavfsiz</p>
-              </div>
-              <div className="auth-brand-stat-divider"></div>
-              <div className="auth-brand-stat-item">
-                <p className="stat-value">99.9%</p>
-                <p className="stat-label">Barqarorlik</p>
-              </div>
-            </div>
+      <div className="relative w-full max-w-md">
+        <div className="card p-8">
+          <div className="mb-6 flex flex-col items-center text-center">
+            <span className="mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-cobalt-700 text-gold-400">
+              <ShieldCheck size={28} />
+            </span>
+            <h1 className="font-display text-2xl font-bold text-cobalt-700">Administrator paneli</h1>
+            <p className="mt-1 text-sm text-ink-soft">Boshqaruv tizimiga kirish</p>
           </div>
 
-          {/* Abstract Circle Decor */}
-          <div className="auth-abstract-circle"></div>
-        </div>
+          <form onSubmit={submit} className="space-y-4">
+            <Input
+              label="Foydalanuvchi nomi"
+              required
+              value={form.username}
+              onChange={(e) => setForm({ ...form, username: e.target.value })}
+            />
+            <Input
+              label="Parol"
+              type="password"
+              required
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+            />
+            <Button type="submit" variant="secondary" fullWidth size="lg" loading={loading}>
+              Kirish
+            </Button>
+          </form>
 
-        {/* Right Side - Form */}
-        <div className="auth-form-side">
-          <div className="auth-form-wrapper">
-            {/* Back link */}
-            <div style={{ marginBottom: '24px' }}>
-              <Link
-                to="/login"
-                className="auth-link"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                }}
-              >
-                <ChevronLeft size={16} />
-                Foydalanuvchi kirishi
-              </Link>
-            </div>
-
-            <div className="auth-form-header">
-              <div className="auth-protocol-badge">
-                <ShieldCheck size={16} />
-                <span>Admin Kirish Protokoli</span>
-              </div>
-              <h3>
-                Admin <br /> Kirish.
-              </h3>
-              <p>Boshqaruv paneliga kirish uchun ma'lumotlaringizni kiriting</p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="auth-form">
-              <div className="auth-form-fields">
-                <div className="auth-form-group">
-                  <label>Username</label>
-                  <div className="auth-input-wrapper">
-                    <User size={20} className="auth-input-icon" />
-                    <input
-                      type="text"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      placeholder="admin_username"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="auth-form-group">
-                  <label>Parol</label>
-                  <div className="auth-input-wrapper">
-                    <Lock size={20} className="auth-input-icon" />
-                    <input
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 bg-primary text-white border-none rounded-md font-bold mt-6 shadow hover:bg-primary-hover flex items-center justify-center gap-2"
-              >
-                {loading ? 'Tekshirilmoqda...' : 'Tizimga Kirish'}
-                <ArrowRight size={20} />
-              </button>
-            </form>
-
-            <div className="auth-form-footer">
-              <p>
-                Oddiy foydalanuvchimisiz?{' '}
-                <Link to="/login" className="auth-link">
-                  Foydalanuvchi kirishi
-                </Link>
-              </p>
-              <p>
-                Yangi foydalanuvchi?{' '}
-                <Link to="/register" className="auth-link">
-                  Ro'yxatdan o'tish
-                </Link>
-              </p>
-            </div>
+          <div className="mt-5 rounded-xl border border-cobalt-100 bg-cobalt-50 p-4 text-sm">
+            <p className="mb-1 font-semibold text-cobalt-700">Sinov uchun admin:</p>
+            <p className="text-ink-soft">
+              Login: <span className="font-mono text-ink">admin123</span> · Parol: <span className="font-mono text-ink">admin123</span>
+            </p>
           </div>
         </div>
-      </motion.div>
+
+        <p className="mt-5 text-center text-sm text-cream-200/70">
+          <Link to="/" className="hover:text-gold-300">← Bosh sahifaga qaytish</Link>
+        </p>
+      </div>
     </div>
   );
-};
-
-export default AdminLogin;
+}

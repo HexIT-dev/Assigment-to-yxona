@@ -18,7 +18,9 @@ app.use(cors({
   origin: true,
   credentials: true,
 }));
-app.use(express.json());
+// Rasmlar base64 (data-URL) ko'rinishida yuboriladi — standart 100kb limit yetmaydi
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ limit: '25mb', extended: true }));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -63,6 +65,25 @@ const initAdmin = async () => {
       }
     });
     console.log('Default admin created: admin123 / admin123');
+  }
+
+  const demoUser = await prisma.user.findUnique({ where: { username: 'user' } });
+  if (!demoUser) {
+    const hashedPassword = await bcrypt.hash('1234', 10);
+    await prisma.user.create({
+      data: {
+        firstName: 'Demo',
+        lastName: 'Foydalanuvchi',
+        email: 'user@toyxona.uz',
+        phone: '+998901112200',
+        username: 'user',
+        password: hashedPassword,
+        role: 'USER',
+        isVerified: true,
+        balance: 0
+      }
+    });
+    console.log('Default user created: user / 1234');
   }
 
   const seedOwners = [

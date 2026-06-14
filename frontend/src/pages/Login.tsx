@@ -1,149 +1,89 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import api from '../utils/api';
-import { Lock, ArrowRight, Sparkles, User, ShieldCheck } from 'lucide-react';
-import { toast } from 'react-hot-toast';
-import { motion } from 'framer-motion';
-import { useLang } from '../context/LanguageContext';
+import { useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import toast from "react-hot-toast";
+import { AuthShell } from "../components/layout/AuthShell";
+import { Button, Input } from "../components/ui";
+import { useAuth } from "../context/AuthContext";
+import { roleHome } from "../components/RouteGuard";
+import api, { apiError } from "../lib/api";
+import type { User } from "../types";
 
-const Login: React.FC = () => {
-  const { t } = useLang();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [form, setForm] = useState({ username: "", password: "" });
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await api.post('/auth/login', { username, password });
-      login(res.data.token, res.data.user);
-      toast.success(t('login_success'));
-      const role = res.data.user.role;
-      if (role === 'OWNER') navigate('/owner');
-      else if (role === 'ADMIN') navigate('/admin');
-      else navigate('/');
-    } catch (error) {
-      toast.error(t('login_error'));
+      const { data } = await api.post<{ user: User; token: string }>("/auth/login", form);
+      login(data.token, data.user);
+      toast.success(`Xush kelibsiz, ${data.user.firstName}!`);
+      const from = (location.state as { from?: string })?.from;
+      navigate(from && data.user.role === "USER" ? from : roleHome(data.user.role), { replace: true });
+    } catch (err: any) {
+      // Owner birinchi marta kirsa — OTP tasdiqlash kerak
+      if (err?.response?.data?.needsVerification) {
+        toast("Hisobingizni tasdiqlang. Emailingizga kod yuborildi.", { icon: "✉️" });
+        navigate("/verify-otp", { state: { email: err.response.data.email } });
+        return;
+      }
+      toast.error(apiError(err, "Login yoki parol noto'g'ri"));
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
+  }
 
   return (
-    <div className="auth-container">
-      {/* Background Decor */}
-      <div className="auth-bg-glow-1"></div>
-      <div className="auth-bg-glow-2"></div>
+    <AuthShell title="Tizimga kirish" subtitle="Hisobingizga kirib bron qilishni davom ettiring">
+      <form onSubmit={submit} className="space-y-4">
+        <Input
+          label="Foydalanuvchi nomi"
+          name="username"
+          placeholder="username"
+          autoComplete="username"
+          required
+          value={form.username}
+          onChange={(e) => setForm({ ...form, username: e.target.value })}
+        />
+        <Input
+          label="Parol"
+          name="password"
+          type="password"
+          placeholder="••••••••"
+          autoComplete="current-password"
+          required
+          value={form.password}
+          onChange={(e) => setForm({ ...form, password: e.target.value })}
+        />
+        <Button type="submit" fullWidth size="lg" loading={loading}>
+          Kirish
+        </Button>
+      </form>
 
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="auth-card"
-      >
-        {/* Left Side - Visual Branding */}
-        <div className="auth-branding">
-           <div className="auth-brand-logo"></div>
-           <div className="auth-brand-content">
-              <Link to="/" className="nav-logo text-white shadow-none">
-                <div className="nav-logo-icon text-accent">
-                  <Sparkles size={24} />
-                </div>
-                <span style={{ color: '#ffffff' }}>Elegance</span>
-              </Link>
+      <div className="mt-6 rounded-xl border border-cream-300 bg-cream-100/60 p-4 text-sm">
+        <p className="mb-2 font-semibold text-ink">Sinov uchun loginlar:</p>
+        <ul className="space-y-1 text-ink-soft">
+          <li>👤 Foydalanuvchi: <span className="font-mono text-ink">user</span> / <span className="font-mono text-ink">1234</span></li>
+          <li>🏛️ To'yxona egasi: <span className="font-mono text-ink">ilhom</span> / <span className="font-mono text-ink">1234</span></li>
+        </ul>
+      </div>
 
-              <div className="auth-brand-main">
-                 <h2>
-                   {t('hero_title')} <br /> <span className="gold-gradient-text">{t('hero_title2')}</span> <br /> {t('hero_title3')}
-                 </h2>
-                 <p>{t('hero_sub')}</p>
-              </div>
-
-              <div className="auth-brand-stats">
-                 <div className="auth-brand-stat-item">
-                    <p className="stat-value">12K</p>
-                    <p className="stat-label">{t('events')}</p>
-                 </div>
-                 <div className="auth-brand-stat-divider"></div>
-                 <div className="auth-brand-stat-item">
-                    <p className="stat-value">500+</p>
-                    <p className="stat-label">{t('venues')}</p>
-                 </div>
-              </div>
-           </div>
-           
-           {/* Abstract Circle Decor */}
-           <div className="auth-abstract-circle"></div>
-        </div>
-
-        {/* Right Side - Form */}
-        <div className="auth-form-side">
-          <div className="auth-form-wrapper">
-            <div className="auth-form-header">
-               <div className="auth-protocol-badge">
-                  <ShieldCheck size={16} />
-                  <span>{t('secure')}</span>
-               </div>
-               <h3>{t('login_title')}</h3>
-               <p>{t('login_subtitle')}</p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="auth-form">
-              <div className="auth-form-fields">
-                <div className="auth-form-group">
-                  <label>{t('username')}</label>
-                  <div className="auth-input-wrapper">
-                    <User size={20} className="auth-input-icon" />
-                    <input
-                      type="text"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="auth-form-group">
-                  <div className="flex justify-between items-center mb-1">
-                    <label style={{ margin: 0 }}>{t('password')}</label>
-                    <a href="#" className="auth-link">{t('forgot')}</a>
-                  </div>
-                  <div className="auth-input-wrapper">
-                    <Lock size={20} className="auth-input-icon" />
-                    <input
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 bg-primary text-white border-none rounded-md font-bold mt-6 shadow hover:bg-primary-hover"
-              >
-                {loading ? t('login_loading') : t('login_btn')}
-                <ArrowRight size={24} />
-              </button>
-            </form>
-
-            <div className="auth-form-footer">
-              <p>
-                {t('no_account')} <Link to="/register" className="auth-link">{t('register_link')}</Link>
-              </p>
-              <p>
-                {t('admin_account')} <Link to="/admin-login" className="auth-link">{t('admin_login')}</Link>
-              </p>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-    </div>
+      <p className="mt-6 text-center text-sm text-ink-soft">
+        Hisobingiz yo'qmi?{" "}
+        <Link to="/register" className="font-semibold text-terracotta-600 hover:underline">
+          Ro'yxatdan o'ting
+        </Link>
+      </p>
+      <p className="mt-2 text-center text-xs text-ink-soft/70">
+        Administrator?{" "}
+        <Link to="/admin/login" className="font-medium text-cobalt-500 hover:underline">
+          Admin kirish
+        </Link>
+      </p>
+    </AuthShell>
   );
-};
-
-export default Login;
+}
