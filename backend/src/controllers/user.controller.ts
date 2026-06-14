@@ -114,8 +114,34 @@ export const updateProfile = async (req: Request, res: Response) => {
 
 export const deleteUser = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-    await prisma.user.delete({ where: { id: id as string } });
+    const id = req.params.id as string;
+
+    // O'zini o'chirib bo'lmaydi
+    if (id === req.user.id) {
+      res.status(400).json({ message: "O'zingizni o'chira olmaysiz" });
+      return;
+    }
+
+    // Egaga tegishli to'yxonalar
+    const halls = await prisma.toyxona.findMany({ where: { ownerId: id }, select: { id: true } });
+    const hallIds = halls.map((h) => h.id);
+
+    // Bog'liq yozuvlarni tartib bilan o'chiramiz (FK cheklovlari buzilmasligi uchun)
+    await prisma.$transaction([
+      // Egasining to'yxonalaridagi bronlar (BookingService cascade bilan ketadi)
+      prisma.booking.deleteMany({ where: { hallId: { in: hallIds } } }),
+      // Foydalanuvchi o'zi qilgan bronlar
+      prisma.booking.deleteMany({ where: { userId: id } }),
+      // Xabarlar
+      prisma.message.deleteMany({ where: { OR: [{ senderId: id }, { receiverId: id }] } }),
+      // Bloklash yozuvlari
+      prisma.blockedUser.deleteMany({ where: { OR: [{ blockerId: id }, { blockedId: id }] } }),
+      // To'yxonalar (rasm/xizmatlar cascade bilan ketadi)
+      prisma.toyxona.deleteMany({ where: { ownerId: id } }),
+      // Eng oxirida foydalanuvchining o'zi
+      prisma.user.delete({ where: { id } }),
+    ]);
+
     res.json({ message: 'User deleted successfully' });
   } catch (error: any) {
     res.status(500).json({ message: error.message });

@@ -197,7 +197,12 @@ export const deleteHall = async (req: Request, res: Response) => {
        return;
     }
 
-    await prisma.toyxona.delete({ where: { id: id as string } });
+    // Avval shu to'yxonaga tegishli bronlarni o'chiramiz (BookingService cascade bilan ketadi),
+    // shundan keyingina to'yxonani (rasm/xizmatlar cascade bilan) o'chirish mumkin bo'ladi.
+    await prisma.$transaction([
+      prisma.booking.deleteMany({ where: { hallId: id as string } }),
+      prisma.toyxona.delete({ where: { id: id as string } }),
+    ]);
     res.json({ message: 'Hall deleted successfully' });
   } catch (error: any) {
     res.status(500).json({ message: error.message });

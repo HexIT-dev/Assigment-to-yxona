@@ -205,6 +205,19 @@ function OwnersTab() {
     finally { setSaving(false); }
   }
 
+  async function remove(o: User) {
+    const hallCount = (o as any).halls?.length ?? 0;
+    const warn = hallCount > 0
+      ? `"${o.firstName} ${o.lastName}" egasini va uning ${hallCount} ta to'yxonasini (hamda barcha bronlarini) o'chirmoqchimisiz?`
+      : `"${o.firstName} ${o.lastName}" egasini o'chirmoqchimisiz?`;
+    if (!confirm(warn)) return;
+    try {
+      await api.delete(`/users/${o.id}`);
+      toast.success("Egasi o'chirildi");
+      load();
+    } catch (err) { toast.error(apiError(err)); }
+  }
+
   return (
     <div>
       <div className="mb-5 flex justify-end">
@@ -233,6 +246,9 @@ function OwnersTab() {
               <div className="mt-3 flex items-center gap-2 border-t border-cream-200 pt-3 text-xs">
                 <Badge tone="info"><Building2 size={11} /> {(o as any).halls?.length ?? 0} to'yxona</Badge>
                 {(o as any).isVerified && <Badge tone="success"><BadgeCheck size={11} /> Tasdiqlangan</Badge>}
+              </div>
+              <div className="mt-3 flex justify-end">
+                <Button size="sm" variant="danger" onClick={() => remove(o)}><Trash2 size={15} /> O'chirish</Button>
               </div>
             </div>
           ))}
