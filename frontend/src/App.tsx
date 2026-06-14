@@ -7,6 +7,8 @@ import HallDetails from "./pages/HallDetails";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import VerifyOTP from "./pages/VerifyOTP";
+import EmailLogin from "./pages/EmailLogin";
+import Profile from "./pages/Profile";
 import MyBookings from "./pages/MyBookings";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -28,12 +30,21 @@ export default function App() {
             </RequireAuth>
           }
         />
+        <Route
+          path="/profile"
+          element={
+            <RequireAuth>
+              <Profile />
+            </RequireAuth>
+          }
+        />
       </Route>
 
       {/* Auth sahifalari (layoutsiz) */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/verify-otp" element={<VerifyOTP />} />
+      <Route path="/email-login" element={<EmailLogin />} />
       <Route path="/admin/login" element={<AdminLogin />} />
 
       {/* Panel sahifalari */}

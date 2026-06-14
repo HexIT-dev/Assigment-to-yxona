@@ -59,6 +59,11 @@ export default function Login() {
           value={form.password}
           onChange={(e) => setForm({ ...form, password: e.target.value })}
         />
+        <div className="text-right">
+          <Link to="/email-login" className="text-sm font-medium text-cobalt-500 hover:underline">
+            Parolni unutdingizmi?
+          </Link>
+        </div>
         <Button type="submit" fullWidth size="lg" loading={loading}>
           Kirish
         </Button>

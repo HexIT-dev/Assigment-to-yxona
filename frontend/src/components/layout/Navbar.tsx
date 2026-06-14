@@ -1,6 +1,6 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { CalendarHeart, LogIn, UserPlus, LogOut, Menu, X, LayoutDashboard, CalendarCheck } from "lucide-react";
+import { CalendarHeart, LogIn, UserPlus, LogOut, Menu, X, LayoutDashboard, CalendarCheck, UserCog } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { roleHome } from "../RouteGuard";
 import { StarMotif } from "../ornaments/Suzani";
@@ -78,6 +78,7 @@ export function Navbar() {
             {user && (user.role === "OWNER" || user.role === "ADMIN") && (
               <MobileLink to={roleHome(user.role)} onClick={() => setOpen(false)}>Boshqaruv paneli</MobileLink>
             )}
+            {user && <MobileLink to="/profile" onClick={() => setOpen(false)}>Profil</MobileLink>}
             <div className="my-2 h-px bg-cream-300" />
             {!user ? (
               <>
@@ -122,6 +123,12 @@ function UserMenu() {
           <CalendarCheck size={17} /> Bronlarim
         </Link>
       )}
+      <Link
+        to="/profile"
+        className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-cobalt-200 px-3.5 text-sm font-semibold text-cobalt-600 transition hover:bg-cobalt-50"
+      >
+        <UserCog size={17} /> Profil
+      </Link>
       <div className="flex items-center gap-2 rounded-xl bg-cream-200 py-1.5 pl-3 pr-1.5">
         <span className="text-sm font-semibold text-cobalt-700">{user.firstName}</span>
         <button

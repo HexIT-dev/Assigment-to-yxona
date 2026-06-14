@@ -184,7 +184,7 @@ function OwnersTab() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", username: "", password: "" });
+  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", username: "" });
 
   const load = useCallback(() => {
     setLoading(true);
@@ -197,9 +197,9 @@ function OwnersTab() {
     setSaving(true);
     try {
       await api.post("/users/create-owner", form);
-      toast.success("To'yxona egasi qo'shildi");
+      toast.success("To'yxona egasi qo'shildi. U email orqali kirib parol o'rnatadi.");
       setOpen(false);
-      setForm({ firstName: "", lastName: "", email: "", phone: "", username: "", password: "" });
+      setForm({ firstName: "", lastName: "", email: "", phone: "", username: "" });
       load();
     } catch (err) { toast.error(apiError(err)); }
     finally { setSaving(false); }
@@ -264,7 +264,9 @@ function OwnersTab() {
           <Input label="Email" type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
           <Input label="Telefon" required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
           <Input label="Foydalanuvchi nomi" required value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
-          <Input label="Parol" type="password" required minLength={6} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+          <p className="rounded-xl bg-gold-50 px-3 py-2 text-xs text-gold-700">
+            Parol kerak emas — ega ko'rsatilgan email orqali kirib, o'zi parol o'rnatadi.
+          </p>
           <div className="flex justify-end pt-2">
             <Button type="submit" loading={saving}>Qo'shish</Button>
           </div>

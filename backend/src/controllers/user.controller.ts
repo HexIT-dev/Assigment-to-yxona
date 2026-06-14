@@ -150,7 +150,7 @@ export const deleteUser = async (req: Request, res: Response) => {
 
 export const createOwnerByAdmin = async (req: Request, res: Response) => {
   try {
-    const { firstName, lastName, email, phone, username, password } = req.body;
+    const { firstName, lastName, email, phone, username } = req.body;
 
     const existing = await prisma.user.findFirst({
       where: { OR: [{ email }, { username }, { phone }] }
@@ -160,15 +160,17 @@ export const createOwnerByAdmin = async (req: Request, res: Response) => {
       return;
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Admin parol o'rnatmaydi. Ega birinchi marta email-kod orqali kiradi va
+    // keyin o'z profilida parol o'rnatadi. Vaqtincha tasodifiy (ishlatib bo'lmaydigan) parol qo'yamiz.
+    const randomPassword = await bcrypt.hash(`${Math.random()}-${Date.now()}`, 10);
     const randomBalance = Math.floor(5000000 + Math.random() * 95000000);
 
     const user = await prisma.user.create({
       data: {
         firstName, lastName, email, phone, username,
-        password: hashedPassword,
+        password: randomPassword,
         role: 'OWNER',
-        // Spec: ega birinchi marta login qilganda OTP orqali tasdiqlanadi
+        // Ega birinchi marta email-kod orqali kirib tasdiqlanadi
         isVerified: false,
         balance: randomBalance
       },

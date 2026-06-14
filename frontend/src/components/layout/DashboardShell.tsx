@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { CalendarHeart, LogOut, Home } from "lucide-react";
+import { CalendarHeart, LogOut, Home, UserCog } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { SuzaniBorder } from "../ornaments/Suzani";
 import { cx } from "../../lib/utils";
@@ -53,6 +53,9 @@ export function DashboardShell({ title, tabs, active, onTab, children }: Props) 
         </nav>
 
         <div className="border-t border-cobalt-500/40 p-3">
+          <Link to="/profile" className="mb-1 flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium text-cream-200/80 hover:bg-cobalt-600">
+            <UserCog size={18} /> Profil
+          </Link>
           <Link to="/" className="mb-1 flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium text-cream-200/80 hover:bg-cobalt-600">
             <Home size={18} /> Saytga o'tish
           </Link>

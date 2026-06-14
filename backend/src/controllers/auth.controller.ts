@@ -89,6 +89,32 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * Email orqali kirish / parolni tiklash uchun kod so'rash.
+ * Barcha rollar uchun ishlaydi. Email mavjudligini oshkor qilmaymiz.
+ */
+export const requestCode = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      res.status(400).json({ message: 'Email kiriting' });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (user) {
+      const otp = generateOtp();
+      await prisma.user.update({ where: { id: user.id }, data: { otp } });
+      await sendOtpEmail(email, otp);
+    }
+
+    // Email ro'yxatda bor-yo'qligini bildirmaymiz (xavfsizlik uchun)
+    res.json({ message: "Agar bu email ro'yxatdan o'tgan bo'lsa, tasdiqlash kodi yuborildi" });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export const verifyOTP = async (req: Request, res: Response) => {
   try {
     const { email, otp } = req.body;
