@@ -23,17 +23,14 @@ export const createBooking = async (req: Request, res: Response) => {
        return;
     }
 
-    // Bir kunga maksimal 2 ta bron (nahorgi osh + oqshomgi to'y)
-    const sameDayCount = await prisma.booking.count({
-      where: {
-        hallId,
-        date: new Date(date),
-        status: { notIn: ['CANCELLED', 'REJECTED'] }
-      }
+    // Agar bu kun allaqachon TASDIQLANGAN bron bilan band bo'lsa — yangi bron qabul qilinmaydi.
+    // (Tasdiqlanmagan/PENDING so'rovlar bir nechta bo'lishi mumkin — ega bittasini tanlaydi.)
+    const approvedExists = await prisma.booking.findFirst({
+      where: { hallId, date: new Date(date), status: 'APPROVED' }
     });
 
-    if (sameDayCount >= 2) {
-       res.status(400).json({ message: 'Bu kun to\'liq band (kuniga 2 tadan ortiq bron mumkin emas)' });
+    if (approvedExists) {
+       res.status(400).json({ message: 'Bu kun allaqachon band qilingan' });
        return;
     }
 
@@ -243,8 +240,10 @@ export const rejectBooking = async (req: Request, res: Response) => {
        return;
     }
 
-    if (req.user.role !== 'OWNER' || booking.hall.ownerId !== req.user.id) {
-       res.status(403).json({ message: 'Only hall owner can reject' });
+    const canReject = req.user.role === 'ADMIN' ||
+      (req.user.role === 'OWNER' && booking.hall.ownerId === req.user.id);
+    if (!canReject) {
+       res.status(403).json({ message: 'Only hall owner or admin can reject' });
        return;
     }
 

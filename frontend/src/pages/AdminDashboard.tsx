@@ -293,5 +293,16 @@ function BookingsTab() {
     catch (err) { toast.error(apiError(err)); }
   }
 
-  return loading ? <PageLoader /> : <BookingsTable bookings={bookings} showHall showUser onCancel={cancel} />;
+  async function approve(b: Booking) {
+    try { await api.patch(`/bookings/${b.id}/approve`); toast.success("Bron tasdiqlandi"); load(); }
+    catch (err) { toast.error(apiError(err)); }
+  }
+
+  async function reject(b: Booking) {
+    if (!confirm("Bronni rad etmoqchimisiz?")) return;
+    try { await api.patch(`/bookings/${b.id}/reject`, { reason: "Admin rad etdi" }); toast.success("Bron rad etildi"); load(); }
+    catch (err) { toast.error(apiError(err)); }
+  }
+
+  return loading ? <PageLoader /> : <BookingsTable bookings={bookings} showHall showUser onCancel={cancel} onApprove={approve} onReject={reject} />;
 }

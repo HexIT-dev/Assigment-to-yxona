@@ -74,6 +74,27 @@ export default function OwnerDashboard() {
     }
   }
 
+  async function approveBooking(b: Booking) {
+    try {
+      await api.patch(`/bookings/${b.id}/approve`);
+      toast.success("Bron tasdiqlandi");
+      loadBookings();
+    } catch (err) {
+      toast.error(apiError(err));
+    }
+  }
+
+  async function rejectBooking(b: Booking) {
+    if (!confirm("Bronni rad etmoqchimisiz?")) return;
+    try {
+      await api.patch(`/bookings/${b.id}/reject`, { reason: "To'yxona egasi rad etdi" });
+      toast.success("Bron rad etildi");
+      loadBookings();
+    } catch (err) {
+      toast.error(apiError(err));
+    }
+  }
+
   return (
     <DashboardShell title="Egasi paneli" tabs={TABS} active={tab} onTab={setTab}>
       {loading ? <PageLoader /> : tab === "halls" ? (
@@ -125,7 +146,7 @@ export default function OwnerDashboard() {
           )}
         </div>
       ) : (
-        <BookingsTable bookings={bookings} showHall showUser onCancel={cancelBooking} />
+        <BookingsTable bookings={bookings} showHall showUser onCancel={cancelBooking} onApprove={approveBooking} onReject={rejectBooking} />
       )}
 
       <Modal open={formOpen} onClose={() => { setFormOpen(false); setEditing(null); }} title={editing ? "To'yxonani tahrirlash" : "Yangi to'yxona qo'shish"} size="xl">

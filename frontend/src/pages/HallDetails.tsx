@@ -74,7 +74,7 @@ export default function HallDetails() {
         seats,
         serviceIds: chosenServices,
       });
-      toast.success("Muvaffaqiyatli to'landi! Broningiz qabul qilindi 🎉");
+      toast.success("Muvaffaqiyatli to'landi! Bron egasi tasdig'ini kutmoqda 🎉");
       setSelectedDate(null);
       setSeats(0);
       setChosenServices([]);

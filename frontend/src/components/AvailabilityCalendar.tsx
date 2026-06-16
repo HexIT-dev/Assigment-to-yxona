@@ -9,10 +9,7 @@ const MONTHS = [
   "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr",
 ];
 
-/** Bir kunga ruxsat etilgan maksimal bron (nahorgi osh + oqshomgi to'y) */
-export const MAX_BOOKINGS_PER_DAY = 2;
-
-type DayState = "past" | "free" | "partial" | "full";
+type DayState = "past" | "free" | "pending" | "booked";
 
 interface Props {
   bookings: Booking[];
@@ -60,9 +57,9 @@ export function AvailabilityCalendar({
 
   function dayState(date: Date): DayState {
     if (isPast(date)) return "past";
-    const count = byDay.get(toDateKey(date))?.length || 0;
-    if (count >= MAX_BOOKINGS_PER_DAY) return "full";
-    if (count > 0) return "partial";
+    const list = byDay.get(toDateKey(date)) || [];
+    if (list.some((b) => b.status === "APPROVED")) return "booked";
+    if (list.some((b) => b.status === "PENDING")) return "pending";
     return "free";
   }
 
@@ -74,13 +71,13 @@ export function AvailabilityCalendar({
     if (state === "past") return;
 
     if (selectable) {
-      // Foydalanuvchi: to'la band bo'lmagan kunni bron uchun tanlaydi
-      // (boshqa mijozlar ma'lumoti ko'rsatilmaydi — maxfiylik)
-      if (state !== "full" && onSelectDate) onSelectDate(key);
+      // Foydalanuvchi: tasdiqlangan (band) bo'lmagan kunni bron uchun tanlaydi.
+      // "So'ralgan" (pending) kunni ham tanlashi mumkin — egasi qaysi birini tasdiqlashini hal qiladi.
+      if (state !== "booked" && onSelectDate) onSelectDate(key);
       return;
     }
 
-    // Admin/egasi: band kunni bossa — kim bron qilgani ko'rinadi
+    // Admin/egasi: bron bo'lgan kunni bossa — kim bron qilgani ko'rinadi
     if (dayBookings.length > 0 && onSelectBooked) onSelectBooked(key, dayBookings);
   }
 
@@ -120,7 +117,7 @@ export function AvailabilityCalendar({
           const state = dayState(date);
           const isSelected = selectedDate === key;
           const hasBookings = (byDay.get(key)?.length ?? 0) > 0;
-          const clickable = state !== "past" && (selectable ? state !== "full" : hasBookings);
+          const clickable = state !== "past" && (selectable ? state !== "booked" : hasBookings);
 
           return (
             <button
@@ -135,7 +132,7 @@ export function AvailabilityCalendar({
               )}
             >
               {date.getDate()}
-              {state === "partial" && (
+              {state === "pending" && (
                 <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-current opacity-70" />
               )}
             </button>
@@ -146,8 +143,8 @@ export function AvailabilityCalendar({
       {/* Legend */}
       <div className="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-xs text-ink-soft">
         <Legend className="bg-green-100 text-[var(--color-success)]" label="Bo'sh" />
-        <Legend className="bg-gold-100 text-gold-700" label="Qisman band (1/2)" />
-        <Legend className="bg-terracotta-100 text-terracotta-600" label="To'liq band" />
+        <Legend className="bg-gold-100 text-gold-700" label="So'ralgan (tasdiq kutilmoqda)" />
+        <Legend className="bg-terracotta-100 text-terracotta-600" label="Band (tasdiqlangan)" />
         <Legend className="bg-cream-200 text-ink-soft/50" label="O'tgan kun" />
       </div>
     </div>
@@ -157,8 +154,8 @@ export function AvailabilityCalendar({
 const stateStyles: Record<DayState, string> = {
   past: "bg-cream-200 text-ink-soft/40",
   free: "bg-green-100 text-[var(--color-success)] hover:bg-green-200",
-  partial: "bg-gold-100 text-gold-700 hover:bg-gold-200",
-  full: "bg-terracotta-100 text-terracotta-600",
+  pending: "bg-gold-100 text-gold-700 hover:bg-gold-200",
+  booked: "bg-terracotta-100 text-terracotta-600",
 };
 
 function Legend({ className, label }: { className: string; label: string }) {
