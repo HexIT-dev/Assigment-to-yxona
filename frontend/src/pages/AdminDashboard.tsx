@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
-  Building2, Users2, CalendarRange, Plus, Pencil, Trash2, Check,
+  Building2, Users2, Users, CalendarRange, Plus, Pencil, Trash2, Check,
   MapPin, Search, Phone, Mail, BadgeCheck,
 } from "lucide-react";
 import { DashboardShell, type Tab } from "../components/layout/DashboardShell";
@@ -17,6 +17,7 @@ import type { Booking, Hall, HallInput, User } from "../types";
 const TABS: Tab[] = [
   { key: "halls", label: "To'yxonalar", icon: <Building2 size={18} /> },
   { key: "owners", label: "Egalar", icon: <Users2 size={18} /> },
+  { key: "users", label: "Foydalanuvchilar", icon: <Users size={18} /> },
   { key: "bookings", label: "Bronlar", icon: <CalendarRange size={18} /> },
 ];
 
@@ -26,6 +27,7 @@ export default function AdminDashboard() {
     <DashboardShell title="Admin paneli" tabs={TABS} active={tab} onTab={setTab}>
       {tab === "halls" && <HallsTab />}
       {tab === "owners" && <OwnersTab />}
+      {tab === "users" && <UsersTab />}
       {tab === "bookings" && <BookingsTab />}
     </DashboardShell>
   );
@@ -272,6 +274,72 @@ function OwnersTab() {
           </div>
         </form>
       </Modal>
+    </div>
+  );
+}
+
+/* ============== FOYDALANUVCHILAR ============== */
+function UsersTab() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+
+  const load = useCallback(() => {
+    setLoading(true);
+    const params: Record<string, string> = { role: "USER" };
+    if (search.trim()) params.search = search.trim();
+    api.get<User[]>("/users", { params }).then((r) => setUsers(r.data)).finally(() => setLoading(false));
+  }, [search]);
+  useEffect(() => {
+    const t = setTimeout(load, 300);
+    return () => clearTimeout(t);
+  }, [load]);
+
+  async function remove(u: User) {
+    if (!confirm(`"${u.firstName} ${u.lastName}" foydalanuvchisini va uning barcha bronlarini o'chirmoqchimisiz?`)) return;
+    try {
+      await api.delete(`/users/${u.id}`);
+      toast.success("Foydalanuvchi o'chirildi");
+      load();
+    } catch (err) { toast.error(apiError(err)); }
+  }
+
+  return (
+    <div>
+      <div className="mb-5">
+        <div className="relative max-w-sm">
+          <Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Ism, familiya yoki username bo'yicha qidirish..."
+            className="w-full rounded-xl border border-cream-300 bg-cream-50 py-2.5 pl-9 pr-4 focus:border-cobalt-400 focus:outline-none focus:ring-2 focus:ring-cobalt-100" />
+        </div>
+      </div>
+
+      {loading ? <PageLoader /> : users.length === 0 ? (
+        <EmptyState title="Foydalanuvchi topilmadi" hint="Hozircha ro'yxatdan o'tgan foydalanuvchi yo'q." />
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {users.map((u) => (
+            <div key={u.id} className="card p-5">
+              <div className="flex items-center gap-3">
+                <span className="grid h-12 w-12 place-items-center rounded-full bg-terracotta-100 font-display text-lg font-bold text-terracotta-600">
+                  {u.firstName[0]}{u.lastName[0]}
+                </span>
+                <div>
+                  <p className="font-semibold text-cobalt-700">{u.firstName} {u.lastName}</p>
+                  <p className="text-xs text-ink-soft">@{u.username}</p>
+                </div>
+              </div>
+              <div className="mt-4 space-y-1.5 text-sm text-ink-soft">
+                <p className="flex items-center gap-2"><Mail size={14} /> {u.email}</p>
+                <p className="flex items-center gap-2"><Phone size={14} /> {u.phone}</p>
+              </div>
+              <div className="mt-3 flex justify-end border-t border-cream-200 pt-3">
+                <Button size="sm" variant="danger" onClick={() => remove(u)}><Trash2 size={15} /> O'chirish</Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
